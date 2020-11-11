@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.List;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
 public class Main {
 
@@ -30,6 +34,9 @@ public class Main {
 
         initSignalHandlers();
 
+
+        List<Host> hosts = parser.hosts();
+        int myid = parser.myId();
         // example
         long pid = ProcessHandle.current().pid();
         System.out.println("My PID is " + pid + ".");
@@ -37,7 +44,9 @@ public class Main {
 
         System.out.println("My id is " + parser.myId() + ".");
         System.out.println("List of hosts is:");
-        for (Host host: parser.hosts()) {
+
+        
+        for (Host host: hosts) {
             System.out.println(host.getId() + ", " + host.getIp() + ", " + host.getPort());
         }
 
@@ -56,6 +65,22 @@ public class Main {
         coordinator.waitOnBarrier();
 
 	System.out.println("Broadcasting messages...");
+    //TODO
+
+    
+
+    DatagramManager mg = new DatagramManager(hosts.get(myid-1).getPort(), hosts);
+    
+    for (int i=0; i < 10; i++) {
+        Message m = new Message((byte)myid, (byte)(3-myid));
+        mg.send(m, 3-myid);
+    }
+
+
+
+    
+    
+    
 
 	System.out.println("Signaling end of broadcasting messages");
         coordinator.finishedBroadcasting();
