@@ -34,7 +34,7 @@ public class Main {
 
         initSignalHandlers();
 
-
+        
         List<Host> hosts = parser.hosts();
         int myid = parser.myId();
         // example
@@ -66,17 +66,25 @@ public class Main {
 
 	System.out.println("Broadcasting messages...");
     //TODO
-
+	int myport = hosts.get(myid-1).getPort();
     
 
-    DatagramManager mg = new DatagramManager(hosts.get(myid-1).getPort(), hosts);
-    
-    for (int i=0; i < 10; i++) {
-        Message m = new Message((byte)myid, (byte)(3-myid));
-        mg.send(m, 3-myid);
+	Delivery callback = new Delivery() {
+		public void deliver(Message m, int from) {
+			System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, m.from);
+		}
+	};
+	URBroadcast urb = new URBroadcast(myid, myport, hosts, callback);
+    //PerfectLink pl = new PerfectLink(myport, hosts, callback);
+	
+    for (int i=0; i < 1; i++) {
+        Message m = new Message((byte)myid, (byte)0);
+        urb.broadcast(m);
+        //pl.send(m, 3-myid);
     }
 
 
+    
 
     
     

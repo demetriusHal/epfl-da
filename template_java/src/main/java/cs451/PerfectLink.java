@@ -8,84 +8,62 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 public class PerfectLink {
 
+	static boolean debug = true;
+	
     public final int port;
-    private final DatagramSocket sending;
-    private final DatagramSocket receiving;
 
 
     //metadata
+    //currently this is the same for all messages, so this can easily go out of proportion
     HashSet<Message> delivered;
     
+    //uses
+    DatagramManager manager;
 
+    //delivery Method
+    Delivery deliverPL;
+    Delivery deliverAbove;
 
-    public PerfectLink(int port) throws SocketException {
+    PerfectLink(int port, List<Host> hlist, Delivery deliverAbove) {
+    	this.deliverAbove = deliverAbove;
         this.port = port;
-        sending = new DatagramSocket();
-        receiving = new DatagramSocket(port);
-        
-        delivered = new HashSet<>();
-    }
+        delivered = new HashSet<Message>();
 
-
-    public void send(Message m, InetAddress addr, int port) throws IOException{
-
-        byte[] buf = m.bytes();
-
-        DatagramPacket packet = new DatagramPacket(buf, buf.length, addr, port);
-        int i = 0;
-        while(true) {
-            sending.send(packet);
-            System.out.println("Sending m "+i++);
-            
-            try {Thread.sleep(1000);}
-            catch(Exception e){;}
-            
-
-        }
-
-    }
-
-    private void ackMessage(DatagramPacket packet, Message m) throws IOException{
-
-        Message ack = Message.ackMessage(m);
-        byte[] buf = ack.bytes();
-
-        DatagramPacket dgram = new DatagramPacket(buf, buf.length, packet.getSocketAddress());
-        
-        sending.send(dgram);
-    }
-
-    public Message receive() throws IOException{
-        byte[] buf = new byte[1024];
-        DatagramPacket received = new DatagramPacket(buf, 4096);
-
-        int i =0;
-
-        while(true) {
-            receiving.receive(received);
-            System.out.println(received.getLength());
-            Message m = new Message(received.getData(), received.getLength());
-            System.out.println("Received "+  i++);
-            if (delivered.contains(m)) {
-                ackMessage(received, m);
-                continue;
+        deliverPL = new Delivery() {
+            public void deliver(Message m, int from) {
+                PerfectLink.this.deliver(m, from);
             }
-            else {
-                delivered.add(m);
-                //sent back ack to stop sending
-                //
-                ackMessage(received, m);
+        };
+        manager = new DatagramManager(port, hlist, deliverPL);
 
-                
-                System.out.println("Delivered m");
-                return m;
-            }
 
-        }
-
-        //return new Message(received.getData());
     }
+
+    void send(Message m, int destination) {
+        manager.send(m, destination);
+    }
+
+
+    //this will be called with call-back style
+    //to match 
+    void deliver(Message m, int source) {
+        if (delivered.contains(m))
+            return ;
+        
+        synchronized(this) {
+        	delivered.add(m.clone());
+        }
+        if (PerfectLink.debug == true)
+        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.sender+" " +m.receiver);
+        deliverAbove.deliver(m, source);
+    }
+
+
+
+
+   
 }

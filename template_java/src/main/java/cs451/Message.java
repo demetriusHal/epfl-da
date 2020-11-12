@@ -16,13 +16,15 @@ public class Message {
 	public byte sender;
 	public byte receiver;
 	public int sequenceNum;
+	public byte from;
+	
 	public byte[] data;
 
 	public byte isAck = 0;
 
 	static public Message  ackMessage(Message m) {
 
-		return new Message(m.sequenceNum, m.receiver, m.sender, ((byte)0x1));
+		return new Message(m.sequenceNum, m.sender, m.receiver, ((byte)0x1));
 
 	}
 
@@ -32,6 +34,7 @@ public class Message {
 		this.sender = sender;
 		this.receiver = receiver;
 		this.isAck = isAck;
+		this.from = sender;
 		
 	}
 
@@ -40,6 +43,7 @@ public class Message {
 		this.sender = sender;
 		this.receiver = receiver;
 		this.isAck = 0;
+		this.from = sender;
 	}
 
 	
@@ -53,6 +57,7 @@ public class Message {
 		this.sender = bb.get();
 		this.receiver = bb.get();
 		this.isAck = bb.get();
+		this.from = bb.get();
 		this.data = Arrays.copyOfRange(bb.array(), 7, msg.length);
 		
 	}
@@ -66,6 +71,7 @@ public class Message {
 		this.sender = bb.get();
 		this.receiver = bb.get();
 		this.isAck = bb.get();
+		this.from = bb.get();
 		this.data = Arrays.copyOfRange(bb.array(), 7, length);
 		
 	}
@@ -85,20 +91,17 @@ public class Message {
 	public boolean equals(Object o)  {
 		if (o == this)
 			return true;
-		
 		//this could crash
 		Message m = (Message) o;
 
 		if (m.sequenceNum != this.sequenceNum)
 			return false;
-		
+
 		if (m.sender != this.sender)
 			return false;
-		
 				
-		if (m.receiver != this.receiver)
-			return false;
-
+//		if (m.receiver != this.receiver)
+//			return false;
 		return true;
 	}
 
@@ -110,7 +113,7 @@ public class Message {
 
 		//hashcode = hashcode*p + data.hashCode();
 		hashcode = hashcode*p + sender;
-		hashcode = hashcode*p + receiver;
+//		hashcode = hashcode*p + receiver;
 		hashcode = hashcode*p + sequenceNum;
 
 		return hashcode;
@@ -127,7 +130,7 @@ public class Message {
 		if (data == null)
 			length = 16;
 		else
-			length = Integer.max(data.length+7, 16);
+			length = Integer.max(data.length+8, 16);
 
 		byte[] bytes = new byte[length];
 
@@ -139,6 +142,7 @@ public class Message {
 		bb.put(sender);
 		bb.put(receiver);
 		bb.put(isAck);
+		bb.put(from);
 		if (data != null)
 			bb.put(data);
 		
@@ -147,9 +151,18 @@ public class Message {
 
 
 	}
+	
+	public Message clone() {
+		Message mnew = new Message(this.sequenceNum, this.sender, this.receiver, this.isAck);
+		mnew.from = this.from;
+		mnew.data = this.data;
+		return mnew;
+	}
 
 
 	public String toString() {
+		if (data == null)
+			data = new byte[0];
 		String rv = String.format("#%d\nfrom:%d\nto:%d\nVal:%s\n",
 		sequenceNum, sender, receiver,new String(data, StandardCharsets.UTF_8));
 

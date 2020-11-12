@@ -22,8 +22,12 @@ public class DatagramManager {
     public InetAddress[] addrs;
     public int[] ports;
 
+    //callback
+    Delivery cb;
 
-    DatagramManager(int port, List<Host> hlist) {
+
+    DatagramManager(int port, List<Host> hlist, Delivery callback) {
+        this.cb = callback;
         this.port = port;
         this.hosts = hlist;
         this.addrs = new InetAddress[hosts.size()];
@@ -55,7 +59,7 @@ public class DatagramManager {
     public void send(Message m, int id) {
         //preprocces
         id = id-1;
-        System.out.println(id);
+        //System.out.println(id);
         Host host = hosts.get(id);
         InetAddress addr;
         int port = host.getPort();
@@ -89,11 +93,11 @@ public class DatagramManager {
             pack.setAddress(addr);
             pack.setPort(port);
 
-            System.out.println("Sender> Started!");
+            //System.out.println("Sender> Started!");
 
 
             while(acked.get(m) == false) {
-                System.out.println("Sender> Sending a message");
+                //System.out.println("Sender> Sending a message");
                 try {
                     DatagramManager.this.outgoing.send(pack);
                     Thread.sleep(1000);
@@ -102,7 +106,7 @@ public class DatagramManager {
                 }
                 
             }
-            System.out.println("Sender> Received ack for message");
+            //System.out.println("Sender> Received ack for message");
         }
     }
 
@@ -125,16 +129,16 @@ public class DatagramManager {
         public void run() {
             
             //here we listen for information
-            System.out.println("Listener> Thread Started");
+            //System.out.println("Listener> Thread Started");
             while (!Thread.interrupted()) {
-                System.out.println("Listener> Thread Reloaded");
+                //System.out.println("Listener> Thread Reloaded");
                 DatagramPacket dgram = new DatagramPacket(new byte[listenSize], listenSize);
                 try {
 					receiving.receive(dgram);
 				} catch (IOException e) {
 					e.printStackTrace();
                 }
-                System.out.println("Listener> Received a Datagram");
+                //System.out.println("Listener> Received a Datagram");
                 Processor p = new Processor(dgram);
                 p.start();
 
@@ -163,19 +167,21 @@ public class DatagramManager {
                 
                 Message ackM = Message.ackMessage(m);
                 byte[] buf = ackM.bytes();
-                InetAddress addr = addrs[m.receiver-1];
-                int port = DatagramManager.this.hosts.get(m.receiver-1).getPort();
+                System.out.println(m.sender);
+                InetAddress addr = addrs[m.sender-1];
+                int port = DatagramManager.this.hosts.get(m.sender-1).getPort();
 
                 DatagramPacket dgram = new DatagramPacket(buf, buf.length, addr, port);
-                System.out.println(packet.getPort()+" " + DatagramManager.this.port);
+                //System.out.println(port+" " + DatagramManager.this.port);
                 //create thread to send
                 Sender s = new Sender(dgram);
                 s.start();
 
                 //deliver message above
                 //TODO callback
+                DatagramManager.this.cb.deliver(m, m.sender);
 
-                System.out.printf("Processor> Delivered %d by %d\n", m.sequenceNum,m.sender);
+                //System.out.printf("Processor> Delivered %d by %d\n", m.sequenceNum,m.sender);
             }
         }
     }
