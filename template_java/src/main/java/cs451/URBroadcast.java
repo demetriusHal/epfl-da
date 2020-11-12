@@ -76,6 +76,7 @@ public class URBroadcast {
 	void deliver(Message m, int from) {
 		// Change Message to from PL level to URB Level , now from m contains original
 		// sender
+		m = change(m);
 
 		synchronized (this) {
 			if (ackM.get(m) == null)
