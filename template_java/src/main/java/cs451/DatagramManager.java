@@ -26,9 +26,8 @@ public class DatagramManager {
 	//These messages contain all the details (Sender, originalSender, Sequence, Destination)
     
 	static boolean debug = false;
-	static int timeout = 5	;
-	static boolean waitAllThreads = true;
-	
+	final static int timeout = 30;
+	final static int recheck = 3; 
 	
     final public int port;
     DatagramSocket outgoing;
@@ -126,7 +125,7 @@ public class DatagramManager {
             //System.out.println("Sender> Started!");
 
             int time = 0;
-            int sleeptime = 1000;
+            int sleeptime = 500;
             while(acked.get(m) == false) {
             	if (DatagramManager.debug)
             		System.out.printf("Sender %d> Sending a message %d %d %d %d\n", Thread.currentThread().getId(),m.sequenceNum, m.from, m.sender, m.receiver);
@@ -257,11 +256,11 @@ public class DatagramManager {
     	try {
     		int oldtasks = 0;
     		//check if no new tasks are being created and stop then.
-    		for (int j=0; j < 60; j++) {
+    		for (int j=0; j < timeout; j++) {
     			int newtasks = (int)(importantExector.getTaskCount()-oldtasks);
     			System.out.println(j+ " Master executor:" + newtasks);
     			oldtasks = (int)importantExector.getTaskCount();
-    			Thread.sleep(1000);
+    			Thread.sleep(recheck*1000);
     			if (newtasks == 0)
     				break;
     		}
