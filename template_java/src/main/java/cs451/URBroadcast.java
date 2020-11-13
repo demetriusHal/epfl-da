@@ -107,4 +107,8 @@ public class URBroadcast {
 			}
 		}
 	}
+	
+    public void finalize() {
+    	pl.finalize();
+    }
 }

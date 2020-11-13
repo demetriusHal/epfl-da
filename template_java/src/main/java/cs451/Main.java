@@ -82,6 +82,8 @@ public class Main {
         urb.broadcast(m);
         //pl.send(m, 3-myid);
     }
+    
+    urb.finalize();
 
 
     

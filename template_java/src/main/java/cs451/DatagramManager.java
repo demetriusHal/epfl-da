@@ -11,12 +11,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class DatagramManager {
     
 	static boolean debug = false;
-	static int nThreads = 128;
-	static int timeout = 1;
+	static int timeout = 10	;
 	static boolean waitAllThreads = true;
 	
 	
@@ -33,8 +33,11 @@ public class DatagramManager {
     //callback
     Delivery cb;
     
+    //listener
+    Listener l;
+    
     //
-    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(128);
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
 
 
     DatagramManager(int port, List<Host> hlist, Delivery callback) {
@@ -62,9 +65,11 @@ public class DatagramManager {
             e.printStackTrace();
         }
 
-        Listener l = new Listener();
+        l = new Listener();
+        //executor.execute(l);
         l.start();
-        	
+        
+        
 
     }
 
@@ -79,6 +84,8 @@ public class DatagramManager {
         try {
             addr = InetAddress.getByName(host.getIp());
             PersistentSender sender = new PersistentSender(m, addr, port);
+            //sender.start();
+            executor.execute(sender);
         } catch(Exception e) {
             e.printStackTrace();
         }
@@ -107,7 +114,7 @@ public class DatagramManager {
             //System.out.println("Sender> Started!");
 
             int time = 0;
-            while(acked.get(m) == false && time < DatagramManager.timeout) {
+            while(acked.get(m) == false) {
                 //System.out.println("Sender> Sending a message");
                 try {
                     DatagramManager.this.outgoing.send(pack);
@@ -151,8 +158,8 @@ public class DatagramManager {
                 }
                 //System.out.println("Listener> Received a Datagram");
                 Processor p = new Processor(dgram);
-                p.start();
-
+                //p.start();
+                executor.execute(p);
             
             }
             //System.out.println("Listener> Thread Stopped");
@@ -189,10 +196,10 @@ public class DatagramManager {
                 //System.out.println(port+" " + DatagramManager.this.port);
                 //create thread to send
                 Sender s = new Sender(dgram);
-                s.start();
-
+                //s.start();
+                executor.execute(s);
+                
                 //deliver message above
-                //TODO callback
                 DatagramManager.this.cb.deliver(m, m.sender);
                 if (DatagramManager.debug)
                 	System.out.printf("Processor> Delivered %d by %d\n", m.sequenceNum,m.sender);
@@ -220,6 +227,13 @@ public class DatagramManager {
         acked.put(m, b);
     }
     
-
+    public void finalize() {
+    	try {
+        	executor.awaitTermination(DatagramManager.timeout, TimeUnit.SECONDS);
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    	}
+    	l.interrupt();
+    }
 
 }

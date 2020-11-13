@@ -64,7 +64,9 @@ public class PerfectLink {
     }
 
 
-
+    public void finalize() {
+    	manager.finalize();
+    }
 
    
 }
