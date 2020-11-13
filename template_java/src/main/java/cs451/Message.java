@@ -24,10 +24,18 @@ public class Message {
 
 	static public Message  ackMessage(Message m) {
 
-		return new Message(m.sequenceNum, m.sender, m.receiver, ((byte)0x1));
+		return new Message(m.sequenceNum, m.sender, m.receiver, m.from, ((byte)0x1));
 
 	}
 
+	public Message(int sequenceNumber ,byte sender, byte receiver, byte from,byte isAck) {
+		this.sequenceNum = sequenceNumber;
+		this.sender = sender;
+		this.receiver = receiver;
+		this.isAck = isAck;
+		this.from = from;
+		
+	}
 
 	public Message(int sequenceNumber ,byte sender, byte receiver, byte isAck) {
 		this.sequenceNum = sequenceNumber;
@@ -58,7 +66,7 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.data = Arrays.copyOfRange(bb.array(), 7, msg.length);
+		this.data = Arrays.copyOfRange(bb.array(), 8, msg.length);
 		
 	}
 
@@ -72,7 +80,7 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.data = Arrays.copyOfRange(bb.array(), 7, length);
+		this.data = Arrays.copyOfRange(bb.array(), 8, length);
 		
 	}
 
@@ -102,6 +110,9 @@ public class Message {
 				
 		if (m.from != this.from)
 			return false;
+		
+		if (m.receiver != this.receiver)
+			return false;
 		return true;
 	}
 
@@ -113,7 +124,7 @@ public class Message {
 
 		//hashcode = hashcode*p + data.hashCode();
 		hashcode = hashcode*p + sender;
-//		hashcode = hashcode*p + receiver;
+		hashcode = hashcode*p + receiver;
 		hashcode = hashcode*p + sequenceNum;
 		hashcode = hashcode*p + from;
 

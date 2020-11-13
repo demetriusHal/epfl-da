@@ -8,7 +8,11 @@ public class URBroadcast {
 
 	static boolean debug = false;
 
-	// general data
+	// Structure:
+	// A URBroadcast message is an  OriginalSender, SequenceNumber
+	// Additional data are are added as the message goes in lower levels
+	// to simplify abstraction we use the same structure and just zero out fields that dont make sense
+	// for higher levels
 
 	int port;
 	List<Host> hlist;
@@ -16,9 +20,9 @@ public class URBroadcast {
 	int id;
 
 	// per-broadcast data
-	HashSet<Message> delivered;
-	HashSet<Message> pending;
-	HashMap<Message, HashSet<Integer>> ackM;
+	 volatile HashSet<Message> delivered;
+	 volatile HashSet<Message> pending;
+	 volatile HashMap<Message, HashSet<Integer>> ackM;
 
 	// callback after done
 	Delivery deliverCallback;
@@ -42,14 +46,6 @@ public class URBroadcast {
 		this.pl = new PerfectLink(port, hlist, deliverCallback);
 	}
 
-	public Message change(Message m) {
-		byte tmp = m.sender;
-		m.sender = m.from;
-		m.from = tmp;
-		return m;
-
-	}
-
 	public void broadcast(Message m) {
 		synchronized (pending) {
 			pending.add(m.clone());
@@ -65,18 +61,17 @@ public class URBroadcast {
 //			System.out.println(i);
 			if (i != id)
 				pl.send(m.clone(), i);
-			else
+			else if (m.from == id)
 				deliver(m.clone(), i);
 		}
 	}
 
-	void deliver(Message m, int sender) {
+	void deliver(Message m, final int sender) {
 		//simplify message to ignore the the sender
 		//hacky fix that allows not use more abstraction for message
 		//theoretically, we should require 1 abstraction per algorithm
 		m.sender = 0;
 		
-
 		synchronized (this) {
 			if (ackM.get(m) == null)
 				ackM.put(m, new HashSet<>());
@@ -94,8 +89,8 @@ public class URBroadcast {
 			mnew.sender = (byte) id;
 			beBroadcast(mnew);
 		}
-		System.out.printf("counted %d %d %d\n",m.sequenceNum,m.from, ackM.get(m).size());
-		synchronized (delivered) {
+		synchronized (this) {
+			//System.out.printf("%d > counted %d %d %d %d\n",this.id,m.sequenceNum,m.from, sender,ackM.get(m).size());
 			if (ackM.get(m).size() >= hlist.size()/2 && !delivered.contains(m)) {
 				
 				delivered.add(m);

@@ -11,6 +11,10 @@ import java.util.HashSet;
 import java.util.List;
 
 public class PerfectLink {
+	
+	// Structure:
+	// A perfect link message is a Sender, OriginalSender, SequenceNumber
+	// If a message is sent more than once it wont be delivered twice
 
 	static boolean debug = false;
 	
@@ -27,7 +31,8 @@ public class PerfectLink {
     //delivery Method
     Delivery deliverPL;
     Delivery deliverAbove;
-
+    
+    //initialize the everything
     PerfectLink(int port, List<Host> hlist, Delivery deliverAbove) {
     	this.deliverAbove = deliverAbove;
         this.port = port;
@@ -42,7 +47,8 @@ public class PerfectLink {
 
 
     }
-
+    
+    //send a message
     void send(Message m, int destination) {
     	//System.out.printf("PerfectLink> Sending %d %d to %d\n",m.sequenceNum, m.sender, destination);
         manager.send(m, destination);
@@ -59,8 +65,8 @@ public class PerfectLink {
         	delivered.add(m.clone());
         }
         if (PerfectLink.debug == true)
-        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.sender+" " +m.from);
-        deliverAbove.deliver(m, source);
+        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.from+" " +m.sender);
+        deliverAbove.deliver(m.clone(), source);
     }
 
 

@@ -1,5 +1,8 @@
 package cs451;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,13 +13,23 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 
 public class Main {
-
+	
+	
+	static FileWriter mainWriter;
     private static void handleSignal() {
         //immediately stop network packet processing
         System.out.println("Immediately stopping network packet processing.");
 
         //write/flush output file if necessary
         System.out.println("Writing output.");
+        try {
+	        mainWriter.flush();
+	        //mainWriter.close();
+        } catch (IOException e) {
+        	e.printStackTrace();
+        }
+        //System.exit(0);
+        
     }
 
     private static void initSignalHandlers() {
@@ -27,13 +40,21 @@ public class Main {
             }
         });
     }
+    
+    static void writeOutput(FileWriter fw, String s) {
+    	try {
+    		fw.write(s);
+    	} catch(IOException e) {
+    		e.printStackTrace();
+    	}
+    }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
         Parser parser = new Parser(args);
         parser.parse();
 
         initSignalHandlers();
-
+        
         
         List<Host> hosts = parser.hosts();
         int myid = parser.myId();
@@ -57,33 +78,49 @@ public class Main {
         if (parser.hasConfig()) {
             System.out.println("Config: " + parser.config());
         }
+        
+        
 
 
         Coordinator coordinator = new Coordinator(parser.myId(), parser.barrierIp(), parser.barrierPort(), parser.signalIp(), parser.signalPort());
+    //read first line to get m
+    BufferedReader reader = new BufferedReader(new FileReader(parser.config()));
+    int nMessages = Integer.parseInt(reader.readLine());
 
-	System.out.println("Waiting for all processes for finish initialization");
-        coordinator.waitOnBarrier();
 
 	System.out.println("Broadcasting messages...");
     //TODO
 	int myport = hosts.get(myid-1).getPort();
     
+	
+	//initialize output writer;
+	final FileWriter myWriter = new FileWriter(String.format("logs/proc%02d.output", myid));
+	mainWriter = myWriter;
 
 	Delivery callback = new Delivery() {
 		public void deliver(Message m, int from) {
-			System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, from);
+			//System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, from);
+			//important the sequence num starts from 1
+			Main.writeOutput(myWriter, String.format("d %d %d\n", from, m.sequenceNum+1));
 		}
 	};
-	URBroadcast urb = new URBroadcast(myid, myport, hosts, callback);
+	FIFOBroadcast fifo = new FIFOBroadcast(myid, myport, hosts, callback);
     //PerfectLink pl = new PerfectLink(myport, hosts, callback);
 	
-    for (int i=0; i < 10; i++) {
+	System.out.println("Waiting for all processes for finish initialization");
+    coordinator.waitOnBarrier();
+	
+	//int m = Integer.parseInt(configLines.get(0));
+	for (int i=0; i < nMessages; i++) {
         Message m = new Message((byte)myid, (byte)0);
-        urb.broadcast(m);
+        fifo.broadcast(m);
+        Main.writeOutput(myWriter, String.format("b %d\n", i+1));
+        
         //pl.send(m, 3-myid);
     }
     
-    urb.finalize();
+    fifo.finalize();
+    myWriter.flush();
 
 
     

@@ -32,7 +32,7 @@ public class FIFOBroadcast {
 				FIFOBroadcast.this.deliver(m, from);
 			}
 		};
-		
+		index = new int[hlist.size()];
 		this.messageBuf = new LinkedList[hlist.size()];
 		for (int i=0; i < hlist.size(); i++) {
 			messageBuf[i] = new LinkedList<>();
@@ -42,10 +42,14 @@ public class FIFOBroadcast {
 		this.urb = new URBroadcast(myid , port , hlist, deliverCallback);
 	}
 	
+	void broadcast(Message m) {
+		urb.broadcast(m);
+	}
 	
 	
-	void deliver(Message m, int from) {
+	void deliver(Message m, int actualFrom) {
 		Vector<Message> toBeDelivered = new Vector<>();
+		int from = actualFrom-1;
 		synchronized(this) {
 			insertSorted(messageBuf[from], m);
 			while (messageBuf[from].size() > 0 && messageBuf[from].get(0).sequenceNum == index[from]) {
@@ -56,7 +60,7 @@ public class FIFOBroadcast {
 			}
 		}
 		for (Message dm: toBeDelivered) {
-			deliverAbove.deliver(dm);
+			deliverAbove.deliver(dm, dm.from);
 		}
 
 			
@@ -73,6 +77,22 @@ public class FIFOBroadcast {
 			pos++;
 		}
 		list.add(pos, m);
+		
+	}
+	
+	public void finalize() {
+		//send all messages kept in buffers
+		urb.finalize();
+		//deliver remaining messages
+		for (int i=0; i < hlist.size(); i++) {
+			var it = messageBuf[i].iterator();
+			while (it.hasNext()) {
+				
+				Message m = it.next();
+				deliverAbove.deliver(m, m.from);
+			}
+		}
+		
 		
 	}
 }
