@@ -9,9 +9,17 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class DatagramManager {
     
+	static boolean debug = false;
+	static int nThreads = 128;
+	static int timeout = 1;
+	static boolean waitAllThreads = true;
+	
+	
     final public int port;
     DatagramSocket outgoing;
     
@@ -24,6 +32,9 @@ public class DatagramManager {
 
     //callback
     Delivery cb;
+    
+    //
+    ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(128);
 
 
     DatagramManager(int port, List<Host> hlist, Delivery callback) {
@@ -53,6 +64,7 @@ public class DatagramManager {
 
         Listener l = new Listener();
         l.start();
+        	
 
     }
 
@@ -67,8 +79,7 @@ public class DatagramManager {
         try {
             addr = InetAddress.getByName(host.getIp());
             PersistentSender sender = new PersistentSender(m, addr, port);
-            sender.start();
-        } catch(IOException e) {
+        } catch(Exception e) {
             e.printStackTrace();
         }
         
@@ -95,8 +106,8 @@ public class DatagramManager {
 
             //System.out.println("Sender> Started!");
 
-
-            while(acked.get(m) == false) {
+            int time = 0;
+            while(acked.get(m) == false && time < DatagramManager.timeout) {
                 //System.out.println("Sender> Sending a message");
                 try {
                     DatagramManager.this.outgoing.send(pack);
@@ -105,6 +116,7 @@ public class DatagramManager {
                     e.printStackTrace();
                 }
                 
+                time += 1;
             }
             //System.out.println("Sender> Received ack for message");
         }
@@ -129,7 +141,6 @@ public class DatagramManager {
         public void run() {
             
             //here we listen for information
-            //System.out.println("Listener> Thread Started");
             while (!Thread.interrupted()) {
                 //System.out.println("Listener> Thread Reloaded");
                 DatagramPacket dgram = new DatagramPacket(new byte[listenSize], listenSize);
@@ -142,7 +153,10 @@ public class DatagramManager {
                 Processor p = new Processor(dgram);
                 p.start();
 
+            
             }
+            //System.out.println("Listener> Thread Stopped");
+
         }
 
     }
@@ -167,7 +181,7 @@ public class DatagramManager {
                 
                 Message ackM = Message.ackMessage(m);
                 byte[] buf = ackM.bytes();
-                System.out.println(m.sender);
+                //System.out.println(m.sender);
                 InetAddress addr = addrs[m.sender-1];
                 int port = DatagramManager.this.hosts.get(m.sender-1).getPort();
 
@@ -180,8 +194,8 @@ public class DatagramManager {
                 //deliver message above
                 //TODO callback
                 DatagramManager.this.cb.deliver(m, m.sender);
-
-                //System.out.printf("Processor> Delivered %d by %d\n", m.sequenceNum,m.sender);
+                if (DatagramManager.debug)
+                	System.out.printf("Processor> Delivered %d by %d\n", m.sequenceNum,m.sender);
             }
         }
     }
@@ -205,5 +219,7 @@ public class DatagramManager {
     synchronized void modifyMap(Message m, boolean b) {
         acked.put(m, b);
     }
+    
+
 
 }

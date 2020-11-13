@@ -100,8 +100,8 @@ public class Message {
 		if (m.sender != this.sender)
 			return false;
 				
-//		if (m.receiver != this.receiver)
-//			return false;
+		if (m.from != this.from)
+			return false;
 		return true;
 	}
 
@@ -115,6 +115,7 @@ public class Message {
 		hashcode = hashcode*p + sender;
 //		hashcode = hashcode*p + receiver;
 		hashcode = hashcode*p + sequenceNum;
+		hashcode = hashcode*p + from;
 
 		return hashcode;
 	}

@@ -12,7 +12,7 @@ import java.util.List;
 
 public class PerfectLink {
 
-	static boolean debug = true;
+	static boolean debug = false;
 	
     public final int port;
 
@@ -44,6 +44,7 @@ public class PerfectLink {
     }
 
     void send(Message m, int destination) {
+    	//System.out.printf("PerfectLink> Sending %d %d to %d\n",m.sequenceNum, m.sender, destination);
         manager.send(m, destination);
     }
 
@@ -58,7 +59,7 @@ public class PerfectLink {
         	delivered.add(m.clone());
         }
         if (PerfectLink.debug == true)
-        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.sender+" " +m.receiver);
+        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.sender+" " +m.from);
         deliverAbove.deliver(m, source);
     }
 

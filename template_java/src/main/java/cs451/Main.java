@@ -71,13 +71,13 @@ public class Main {
 
 	Delivery callback = new Delivery() {
 		public void deliver(Message m, int from) {
-			System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, m.from);
+			System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, from);
 		}
 	};
 	URBroadcast urb = new URBroadcast(myid, myport, hosts, callback);
     //PerfectLink pl = new PerfectLink(myport, hosts, callback);
 	
-    for (int i=0; i < 1; i++) {
+    for (int i=0; i < 10; i++) {
         Message m = new Message((byte)myid, (byte)0);
         urb.broadcast(m);
         //pl.send(m, 3-myid);

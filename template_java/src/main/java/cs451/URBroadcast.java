@@ -59,11 +59,8 @@ public class URBroadcast {
 	}
 
 	private void beBroadcast(Message m) {
-		// from URB level to PL level, now m contains the actual sender
-		// this is a hacky solution instead of creating a new structure for message
-		// sthat contain also original sender
 
-		m = change(m);
+		
 		for (int i = 1; i <= hlist.size(); i++) {
 //			System.out.println(i);
 			if (i != id)
@@ -73,17 +70,19 @@ public class URBroadcast {
 		}
 	}
 
-	void deliver(Message m, int from) {
-		// Change Message to from PL level to URB Level , now from m contains original
-		// sender
-		m = change(m);
+	void deliver(Message m, int sender) {
+		//simplify message to ignore the the sender
+		//hacky fix that allows not use more abstraction for message
+		//theoretically, we should require 1 abstraction per algorithm
+		m.sender = 0;
+		
 
 		synchronized (this) {
 			if (ackM.get(m) == null)
 				ackM.put(m, new HashSet<>());
-			ackM.get(m).add(from);
+			ackM.get(m).add(sender);
 		}
-		System.out.printf(">>>>%d BebDelivered %d %d %d - %d\n", id, m.sequenceNum, m.sender, m.from, from);
+		//System.out.printf(">>>>%d BebDelivered %d %d %d - %d\n", id, m.sequenceNum, m.sender, m.from, from);
 
 		if (!pending.contains(m)) {
 			synchronized (pending) {
@@ -92,18 +91,20 @@ public class URBroadcast {
 			}
 			// we will also send the message
 			Message mnew = m.clone();
-			mnew.from = (byte) id;
+			mnew.sender = (byte) id;
 			beBroadcast(mnew);
 		}
-		System.out.println(ackM.get(m).size());
-		if (ackM.get(m).size() >= hlist.size() / 2 && !delivered.contains(m)) {
-			synchronized (delivered) {
+		System.out.printf("counted %d %d %d\n",m.sequenceNum,m.from, ackM.get(m).size());
+		synchronized (delivered) {
+			if (ackM.get(m).size() >= hlist.size()/2 && !delivered.contains(m)) {
+				
 				delivered.add(m);
+				
+				// todo perhaps add a daemon who checks this here
+				if (URBroadcast.debug)
+					System.out.printf("\tURBroadcast> Delivered %d by %d - %d\n", m.sequenceNum, m.from, m.sender);
+				this.deliverAbove.deliver(m, m.from);
 			}
-			// todo perhaps add a daemon who checks this here
-			// if (URBroadcast.debug)
-			System.out.printf("\tURBroadcast> Delivered %d by %d\n", m.sequenceNum, m.from);
-			this.deliverAbove.deliver(m, m.sender);
 		}
 	}
 }
