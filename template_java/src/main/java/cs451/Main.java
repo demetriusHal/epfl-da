@@ -94,7 +94,7 @@ public class Main {
     
 	
 	//initialize output writer;
-	final FileWriter myWriter = new FileWriter(String.format("logs/proc%02d.output", myid));
+	final FileWriter myWriter = new FileWriter(String.format(parser.output(), myid));
 	mainWriter = myWriter;
 
 	Delivery callback = new Delivery() {
