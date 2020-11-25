@@ -26,7 +26,7 @@ public class DatagramManager {
 	//These messages contain all the details (Sender, originalSender, Sequence, Destination)
     
 	static boolean debug = false;
-	final static int timeout = 15;
+	final static int timeout = 5;
 	final static int recheck = 5; 
 	
     final public int port;

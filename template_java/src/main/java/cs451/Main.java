@@ -119,7 +119,7 @@ public class Main {
         //pl.send(m, 3-myid);
     }
     
-    fifo.finalize();
+    //fifo.finalize();
     myWriter.flush();
 
 
