@@ -96,6 +96,7 @@ public class URBroadcast {
 
 			// we will also send the message
 			if (flag) {
+				//Message mnew = m.clone();
 				Message mnew = m.clone();
 				mnew.sender = (byte) id;
 				beBroadcast(mnew);

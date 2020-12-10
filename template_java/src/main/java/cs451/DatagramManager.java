@@ -125,7 +125,7 @@ public class DatagramManager {
             //System.out.println("Sender> Started!");
 
             int time = 0;
-            int sleeptime = 500;
+            int sleeptime = 250;
             while(acked.get(m) == false) {
             	if (DatagramManager.debug)
             		System.out.printf("Sender %d> Sending a message %d %d %d %d\n", Thread.currentThread().getId(),m.sequenceNum, m.from, m.sender, m.receiver);
