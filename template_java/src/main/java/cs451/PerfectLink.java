@@ -63,11 +63,13 @@ public class PerfectLink {
             return ;
         
         synchronized(this) {
+            if (delivered.containsKey(m))
+                return ;
         	delivered.put(m.clone(), true);
+	        if (PerfectLink.debug == true)
+	        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.from+" " +m.sender);
+	        deliverAbove.deliver(m, source);
         }
-        if (PerfectLink.debug == true)
-        	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.from+" " +m.sender);
-        deliverAbove.deliver(m, source);
     }
 
 

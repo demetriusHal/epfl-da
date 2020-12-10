@@ -23,8 +23,8 @@ public class URBroadcast {
 
 	// per-broadcast data
 	//VOLATATILE
-	  ConcurrentHashMap<Message, Boolean> delivered;
-	  ConcurrentHashMap<Message, Boolean> pending;
+	 HashSet<Message> delivered;
+	 HashSet<Message> pending;
 	 //volatile ConcurrentHashMap<Message, ConcurrentHashMap<Integer, Boolean>> ackM;
 	  ConcurrentHashMap<Message, AtomicInteger> ackM;
 
@@ -37,8 +37,8 @@ public class URBroadcast {
 		id = myid;
 		this.port = port;
 		this.hlist = hlist;
-		pending = new ConcurrentHashMap<>();
-		delivered = new ConcurrentHashMap<>();
+		pending = new HashSet<>();
+		delivered = new HashSet<>();
 		ackM = new ConcurrentHashMap<>();
 
 		deliverCallback = new Delivery() {
@@ -51,7 +51,9 @@ public class URBroadcast {
 	}
 
 	public void broadcast(Message m) {
-		pending.put(m.clone(), true);
+		synchronized (pending) {
+			pending.add(m.clone());
+		}
 
 		// BE broadcast
 		beBroadcast(m);
@@ -82,25 +84,42 @@ public class URBroadcast {
 		Integer total = ackM.get(m).incrementAndGet();
 		//System.out.printf(">>>>%d BebDelivered %d %d %d - %d\n", id, m.sequenceNum, m.sender, m.from, from);
 
-		if (!pending.containsKey(m)) {
-			pending.put(m, true);
+		if (!pending.contains(m)) {
+			
+			boolean flag = false;
+			synchronized (pending) {
+				if (!pending.contains(m)) {
+					pending.add(m);
+					flag = true;
+				}
+			}
 
 			// we will also send the message
-			Message mnew = m.clone();
-			mnew.sender = (byte) id;
-			beBroadcast(mnew);
+			if (flag) {
+				Message mnew = m.clone();
+				mnew.sender = (byte) id;
+				beBroadcast(mnew);
+			}
 		}
-		synchronized (this) {
 			//System.out.printf("%d > counted %d %d %d %d\n",this.id,m.sequenceNum,m.from, sender,ackM.get(m).size());
-			if (total >= hlist.size()/2 && !delivered.containsKey(m)) {
-				delivered.put(m, true);
+			if (total >= hlist.size()/2 && !delivered.contains(m)) {
 				
+				boolean doDeliver = false;
+				synchronized (delivered) {
+					if (!delivered.contains(m)) {
+						delivered.add(m);
+						doDeliver = true;
+					}
+				}
+				
+				
+				if (!doDeliver)
+					return ;
 				// todo perhaps add a daemon who checks this here
 				if (URBroadcast.debug)
 					System.out.printf("\tURBroadcast> Delivered %d by %d - %d\n", m.sequenceNum, m.from, m.sender);
 				this.deliverAbove.deliver(m, m.from);
 			}
-		}
 	}
 	
     public void finalize() {
