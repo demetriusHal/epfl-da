@@ -26,7 +26,7 @@ public class URBroadcast {
 	 HashSet<Message> delivered;
 	 HashSet<Message> pending;
 	 //volatile ConcurrentHashMap<Message, ConcurrentHashMap<Integer, Boolean>> ackM;
-	  ConcurrentHashMap<Message, AtomicInteger> ackM;
+	 ConcurrentHashMap<Message, AtomicInteger> ackM;
 
 	// callback after done
 	Delivery deliverCallback;

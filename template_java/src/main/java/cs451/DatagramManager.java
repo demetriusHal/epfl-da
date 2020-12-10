@@ -109,7 +109,7 @@ public class DatagramManager {
         int port;
 
         PersistentSender(Message m, InetAddress addr, int port) {
-            this.m = m.clone();
+            this.m = m;
             this.addr = addr;
             this.port = port;
         }
