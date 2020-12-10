@@ -9,6 +9,7 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PerfectLink {
 	
@@ -23,7 +24,7 @@ public class PerfectLink {
 
     //metadata
     //currently this is the same for all messages, so this can easily go out of proportion
-    HashSet<Message> delivered;
+    ConcurrentHashMap<Message, Boolean> delivered;
     
     //uses
     DatagramManager manager;
@@ -36,7 +37,7 @@ public class PerfectLink {
     PerfectLink(int port, List<Host> hlist, Delivery deliverAbove) {
     	this.deliverAbove = deliverAbove;
         this.port = port;
-        delivered = new HashSet<Message>();
+        delivered = new ConcurrentHashMap<Message, Boolean>();
 
         deliverPL = new Delivery() {
             public void deliver(Message m, int from) {
@@ -58,15 +59,15 @@ public class PerfectLink {
     //this will be called with call-back style
     //to match 
     void deliver(Message m, int source) {
-        if (delivered.contains(m))
+        if (delivered.containsKey(m))
             return ;
         
         synchronized(this) {
-        	delivered.add(m.clone());
+        	delivered.put(m.clone(), true);
         }
         if (PerfectLink.debug == true)
         	System.out.println("\t\tPerfectLink> Delivered "+ m.sequenceNum+" "+m.from+" " +m.sender);
-        deliverAbove.deliver(m.clone(), source);
+        deliverAbove.deliver(m, source);
     }
 
 

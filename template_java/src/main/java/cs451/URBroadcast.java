@@ -3,6 +3,8 @@ package cs451;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class URBroadcast {
 
@@ -20,9 +22,11 @@ public class URBroadcast {
 	int id;
 
 	// per-broadcast data
-	 volatile HashSet<Message> delivered;
-	 volatile HashSet<Message> pending;
-	 volatile HashMap<Message, HashSet<Integer>> ackM;
+	//VOLATATILE
+	  ConcurrentHashMap<Message, Boolean> delivered;
+	  ConcurrentHashMap<Message, Boolean> pending;
+	 //volatile ConcurrentHashMap<Message, ConcurrentHashMap<Integer, Boolean>> ackM;
+	  ConcurrentHashMap<Message, AtomicInteger> ackM;
 
 	// callback after done
 	Delivery deliverCallback;
@@ -33,9 +37,9 @@ public class URBroadcast {
 		id = myid;
 		this.port = port;
 		this.hlist = hlist;
-		pending = new HashSet<>();
-		delivered = new HashSet<>();
-		ackM = new HashMap<>();
+		pending = new ConcurrentHashMap<>();
+		delivered = new ConcurrentHashMap<>();
+		ackM = new ConcurrentHashMap<>();
 
 		deliverCallback = new Delivery() {
 			public void deliver(Message m, int from) {
@@ -47,9 +51,8 @@ public class URBroadcast {
 	}
 
 	public void broadcast(Message m) {
-		synchronized (pending) {
-			pending.add(m.clone());
-		}
+		pending.put(m.clone(), true);
+
 		// BE broadcast
 		beBroadcast(m);
 	}
@@ -71,19 +74,17 @@ public class URBroadcast {
 		//hacky fix that allows not use more abstraction for message
 		//theoretically, we should require 1 abstraction per algorithm
 		m.sender = 0;
-		
-		synchronized (this) {
+		synchronized(this) {
 			if (ackM.get(m) == null)
-				ackM.put(m, new HashSet<>());
-			ackM.get(m).add(sender);
+				ackM.put(m, new AtomicInteger(0));
 		}
+			//ackM.get(m).put(sender, true);
+		Integer total = ackM.get(m).incrementAndGet();
 		//System.out.printf(">>>>%d BebDelivered %d %d %d - %d\n", id, m.sequenceNum, m.sender, m.from, from);
 
-		if (!pending.contains(m)) {
-			synchronized (pending) {
-				pending.add(m);
+		if (!pending.containsKey(m)) {
+			pending.put(m, true);
 
-			}
 			// we will also send the message
 			Message mnew = m.clone();
 			mnew.sender = (byte) id;
@@ -91,9 +92,8 @@ public class URBroadcast {
 		}
 		synchronized (this) {
 			//System.out.printf("%d > counted %d %d %d %d\n",this.id,m.sequenceNum,m.from, sender,ackM.get(m).size());
-			if (ackM.get(m).size() >= hlist.size()/2 && !delivered.contains(m)) {
-				
-				delivered.add(m);
+			if (total >= hlist.size()/2 && !delivered.containsKey(m)) {
+				delivered.put(m, true);
 				
 				// todo perhaps add a daemon who checks this here
 				if (URBroadcast.debug)

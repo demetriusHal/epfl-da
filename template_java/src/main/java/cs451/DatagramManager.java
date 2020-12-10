@@ -9,6 +9,7 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -33,7 +34,7 @@ public class DatagramManager {
     DatagramSocket outgoing;
     
     //ack map
-    private HashMap<Message, Boolean> acked;
+    private ConcurrentHashMap<Message, Boolean> acked;
     public List<Host> hosts;
 
     public InetAddress[] addrs;
@@ -65,7 +66,7 @@ public class DatagramManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        acked = new HashMap<>();
+        acked = new ConcurrentHashMap<>();
 
 
         try {
@@ -247,7 +248,8 @@ public class DatagramManager {
         }
     }
  
-    synchronized void modifyMap(Message m, boolean b) {
+    //changed this into non-synchronized
+    void  modifyMap(Message m, boolean b) {
         acked.put(m, b);
     }
     
