@@ -116,6 +116,9 @@ public class LCBroadcast {
 	
 	boolean compareClocks(short[] snapshot,short[] sender, int from) {
 		from = from-1;
+		
+		if (snapshot[from] < sender[from])
+			return false;
 
 		for (int i=0; i < dependencyList[from].length && dependencyList[from][i] != -1 ; i++) {
 			int index = dependencyList[from][i];
