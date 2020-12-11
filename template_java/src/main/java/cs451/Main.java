@@ -14,15 +14,24 @@ import java.net.InetAddress;
 
 public class Main {
 	
+	static boolean LocalCausal = false;
+	
+	static LCBroadcast lcb;
+	
+	//this is my buffered writer
+	static String gigaString = "";
 	
 	static FileWriter mainWriter;
     private static void handleSignal() {
         //immediately stop network packet processing
         System.out.println("Immediately stopping network packet processing.");
-
+        lcb.finalize();
         //write/flush output file if necessary
         System.out.println("Writing output.");
         try {
+        	synchronized(mainWriter) {
+        		Main.writeOutput(mainWriter, gigaString);
+        	}
 	        mainWriter.flush();
 	        //mainWriter.close();
         } catch (IOException e) {
@@ -87,6 +96,8 @@ public class Main {
     BufferedReader reader = new BufferedReader(new FileReader(parser.config()));
     int nMessages = Integer.parseInt(reader.readLine());
 
+    
+
 
 	System.out.println("Broadcasting messages...");
     //TODO
@@ -101,20 +112,58 @@ public class Main {
 		public void deliver(Message m, int from) {
 			//System.out.printf("Final> Delivered %d by %d\n", m.sequenceNum, from);
 			//important the sequence num starts from 1
-			Main.writeOutput(myWriter, String.format("d %d %d\n", from, m.sequenceNum+1));
+			//Main.writeOutput(myWriter, String.format("d %d %d\n", from, m.sequenceNum+1));
+			synchronized(mainWriter) {
+				gigaString += String.format("d %d %d\n", from, m.sequenceNum+1);
+				if (gigaString.length() > 4096)
+					Main.writeOutput(myWriter, gigaString);
+				gigaString = "";
+
+			}
 		}
 	};
-	FIFOBroadcast fifo = new FIFOBroadcast(myid, myport, hosts, callback);
-    //PerfectLink pl = new PerfectLink(myport, hosts, callback);
+
+	
+	int[][] deplist = new int[hosts.size()][];
+	for (int i=0; i < deplist.length; i++) {
+		deplist[i] = new int[hosts.size()+1];
+		int k = 0;
+		String line =  reader.readLine();
+		String[] splitted = line.split(" ");
+		int j;
+		for (j=0;j < splitted.length &&  j < deplist.length; j++) {
+			deplist[i][j] = Integer.parseInt(splitted[j])-1;
+		}
+		deplist[i][j] = -1;
+	}
+	
+	
+//	
+//	if (true)
+//		return;
+	// static init
+    Message.vcSize = hosts.size();
+    
+	//FIFOBroadcast fifo = new FIFOBroadcast(myid, myport, hosts, callback);
+	lcb = new LCBroadcast(myid, myport, hosts, callback, deplist);
+	
+
+
 	
 	System.out.println("Waiting for all processes for finish initialization");
     coordinator.waitOnBarrier();
-	
+
+    
+    
 	//int m = Integer.parseInt(configLines.get(0));
 	for (int i=0; i < nMessages; i++) {
         Message m = new Message((byte)myid, (byte)0);
-        fifo.broadcast(m);
-        Main.writeOutput(myWriter, String.format("b %d\n", i+1));
+        synchronized(mainWriter) {
+            gigaString += String.format("b %d\n", i+1);
+        }
+        //Main.writeOutput(myWriter, String.format("b %d\n", i+1));
+        lcb.broadcast(m);
+        
         
         //pl.send(m, 3-myid);
     }

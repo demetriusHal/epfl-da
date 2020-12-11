@@ -11,14 +11,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Message {
 
+	static int vcSize = 20;
 	static AtomicInteger seqGlobal = new AtomicInteger(0);
 	//header info
 	public byte sender;
 	public byte receiver;
-	public int sequenceNum;
+	public 	int sequenceNum;
 	public byte from;
 	
 	public byte[] data;
+	
+	
+	//maybe use two bytes?
+	public byte[] vectorClock;
 
 	public byte isAck = 0;
 
@@ -35,6 +40,8 @@ public class Message {
 		this.isAck = isAck;
 		this.from = from;
 		
+		this.vectorClock = null;
+		
 	}
 
 	public Message(int sequenceNumber ,byte sender, byte receiver, byte isAck) {
@@ -43,7 +50,9 @@ public class Message {
 		this.receiver = receiver;
 		this.isAck = isAck;
 		this.from = sender;
-		
+	
+		this.vectorClock = null;
+
 	}
 
 	public Message(byte sender, byte receiver) {
@@ -52,6 +61,9 @@ public class Message {
 		this.receiver = receiver;
 		this.isAck = 0;
 		this.from = sender;
+		
+		this.vectorClock = null;
+
 	}
 
 	
@@ -66,7 +78,8 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.data = Arrays.copyOfRange(bb.array(), 8, msg.length);
+		this.vectorClock = Arrays.copyOfRange(bb.array(), 8,8+vcSize);
+		this.data = Arrays.copyOfRange(bb.array(), 8+vcSize, msg.length+vcSize);
 		
 	}
 
@@ -80,7 +93,8 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.data = Arrays.copyOfRange(bb.array(), 8, length);
+		this.vectorClock = Arrays.copyOfRange(bb.array(), 8,8+vcSize);
+		this.data = Arrays.copyOfRange(bb.array(), 8+vcSize, length+vcSize);
 		
 	}
 
@@ -92,6 +106,10 @@ public class Message {
 	public void setData(String s) {
 		byte[] b = s.getBytes();
 		this.data = b.clone();
+	}
+	
+	public void setVC(byte[] vclock) {
+		this.vectorClock = vclock;
 	}
 
 
@@ -144,17 +162,19 @@ public class Message {
 		else
 			length = Integer.max(data.length+8, 16);
 
-		byte[] bytes = new byte[length];
+		byte[] bytes = new byte[length+vcSize*2];
 
 		ByteBuffer bb = ByteBuffer.wrap(bytes);
 		bb.order(ByteOrder.BIG_ENDIAN);
 
 
-		bb.putInt(sequenceNum);
-		bb.put(sender);
-		bb.put(receiver);
-		bb.put(isAck);
-		bb.put(from);
+		bb.putInt(sequenceNum);		//4
+		bb.put(sender);				//5
+		bb.put(receiver);			//6
+		bb.put(isAck);				//7
+		bb.put(from);				//8
+		if (vectorClock != null)
+			bb.put(vectorClock);		//n
 		if (data != null)
 			bb.put(data);
 		
@@ -168,6 +188,8 @@ public class Message {
 		Message mnew = new Message(this.sequenceNum, this.sender, this.receiver, this.isAck);
 		mnew.from = this.from;
 		mnew.data = this.data;
+		if (this.vectorClock != null)
+			mnew.vectorClock = this.vectorClock.clone();
 		return mnew;
 	}
 
