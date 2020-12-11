@@ -150,9 +150,7 @@ public class Main {
 	//int m = Integer.parseInt(configLines.get(0));
 	for (int i=0; i < nMessages; i++) {
         Message m = new Message((byte)myid, (byte)0);
-//        synchronized(mainWriter) {
-//            gigaString = gigaString + String.format("b %d\n", i+1);
-//        }
+
         Main.writeOutput(myWriter, String.format("b %d\n", i+1));
         lcb.broadcast(m);
         

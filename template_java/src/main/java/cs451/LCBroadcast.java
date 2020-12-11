@@ -4,6 +4,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class LCBroadcast {
 	static boolean debug = false;
@@ -27,6 +29,8 @@ public class LCBroadcast {
 	LinkedList<Message> pending;
 	
 	int[][] dependencyList;
+	
+	public ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
 	
 	LCBroadcast(int myid, int port, List<Host> hlist, Delivery deliverAbove, int[][] depList) {
 		this.deliverAbove = deliverAbove;
@@ -99,7 +103,7 @@ public class LCBroadcast {
 				}
 			}
 		}
-		System.out.printf("Remaining: %d Messages\n", set.size());
+		//System.out.printf("Remaining: %d Messages\n", set.size());
  	}
 	
 	public void broadcast(Message m) {
@@ -113,6 +117,13 @@ public class LCBroadcast {
 		}
 		
 	}
+	
+	public void threadBroadcast(Message m) {
+		threadBroadcaster t = new threadBroadcaster(m);
+		executor.execute(t);
+	}
+	
+
 	
 	boolean compareClocks(short[] snapshot,short[] sender, int from) {
 		from = from-1;
@@ -129,10 +140,10 @@ public class LCBroadcast {
 	}
 	
 	
-	public class threadBrodcaster extends Thread {
+	public class threadBroadcaster extends Thread {
 		Message m;
 		
-		threadBrodcaster(Message m) {
+		public threadBroadcaster(Message m) {
 			this.m = m;
 		}
 		
