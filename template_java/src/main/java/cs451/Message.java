@@ -23,7 +23,8 @@ public class Message {
 	
 	
 	//maybe use two bytes?
-	public byte[] vectorClock;
+	public int clockSize = 2;
+	public short[] vectorClock;
 
 	public byte isAck = 0;
 
@@ -78,7 +79,7 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.vectorClock = Arrays.copyOfRange(bb.array(), 8,8+vcSize);
+		this.vectorClock = byteToShort((Arrays.copyOfRange(bb.array(), 8,8+vcSize*clockSize)));
 		this.data = Arrays.copyOfRange(bb.array(), 8+vcSize, msg.length+vcSize);
 		
 	}
@@ -93,11 +94,23 @@ public class Message {
 		this.receiver = bb.get();
 		this.isAck = bb.get();
 		this.from = bb.get();
-		this.vectorClock = Arrays.copyOfRange(bb.array(), 8,8+vcSize);
+		this.vectorClock = byteToShort(Arrays.copyOfRange(bb.array(), 8,8+vcSize*clockSize));
 		this.data = Arrays.copyOfRange(bb.array(), 8+vcSize, length+vcSize);
 		
 	}
 
+	
+	public short[] byteToShort(byte[] bytes ) {
+		short[] shorts = new short[bytes.length/2];
+		ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).asShortBuffer().get(shorts);
+		return shorts;
+	}
+	
+	public byte[] shortToByte(short[] shorts) {
+		byte[] bytes = new byte[shorts.length * 2];
+		ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).asShortBuffer().put(shorts);
+		return bytes;
+	}
 	
 	public void setData(byte[] data) {
 		this.data = data.clone();
@@ -108,7 +121,7 @@ public class Message {
 		this.data = b.clone();
 	}
 	
-	public void setVC(byte[] vclock) {
+	public void setVC(short[] vclock) {
 		this.vectorClock = vclock;
 	}
 
@@ -162,7 +175,7 @@ public class Message {
 		else
 			length = Integer.max(data.length+8, 16);
 
-		byte[] bytes = new byte[length+vcSize*2];
+		byte[] bytes = new byte[length+vcSize*clockSize*2];
 
 		ByteBuffer bb = ByteBuffer.wrap(bytes);
 		bb.order(ByteOrder.BIG_ENDIAN);
@@ -174,7 +187,7 @@ public class Message {
 		bb.put(isAck);				//7
 		bb.put(from);				//8
 		if (vectorClock != null)
-			bb.put(vectorClock);		//n
+			bb.put(shortToByte(vectorClock));		//n
 		if (data != null)
 			bb.put(data);
 		

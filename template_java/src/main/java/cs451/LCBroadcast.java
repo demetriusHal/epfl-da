@@ -20,7 +20,7 @@ public class LCBroadcast {
 	
 	int[] index;
 	
-	byte[] vectorClock;
+	short[] vectorClock;
 	
 	//HashSet<Message> pending;
 
@@ -48,7 +48,7 @@ public class LCBroadcast {
 		this.urb = new URBroadcast(myid , port , hlist, deliverCallback);
 		
 		// init to 0
-		vectorClock = new byte[Message.vcSize];
+		vectorClock = new short[Message.vcSize];
 		
 		//pending = new HashSet<>();
 		pending = new LinkedList<>();
@@ -57,7 +57,7 @@ public class LCBroadcast {
 	}
 	
 	void deliver(Message m, final int sender) {
-		byte[] snapshot;
+		short[] snapshot;
 		if (sender != id) {
 		//{
 			synchronized(pending) {
@@ -74,7 +74,7 @@ public class LCBroadcast {
 		}
 	}
 	
-	void deliverPending(byte[] snapshot, LinkedList<Message>  set) {
+	void deliverPending(short[] snapshot, LinkedList<Message>  set) {
 		//brute force through the items
 		//although the optimal solution would be to maintain a dependency matrix
 		//where a number (i,j) would trigger a check on jth message if the ith process got an update
@@ -114,7 +114,7 @@ public class LCBroadcast {
 		
 	}
 	
-	boolean compareClocks(byte[] snapshot,byte[] sender, int from) {
+	boolean compareClocks(short[] snapshot,short[] sender, int from) {
 		from = from-1;
 
 		for (int i=0; i < dependencyList[from].length && dependencyList[from][i] != -1 ; i++) {

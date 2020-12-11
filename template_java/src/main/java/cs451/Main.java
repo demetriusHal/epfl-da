@@ -29,9 +29,9 @@ public class Main {
         //write/flush output file if necessary
         System.out.println("Writing output.");
         try {
-        	synchronized(mainWriter) {
-        		Main.writeOutput(mainWriter, gigaString);
-        	}
+//        	synchronized(mainWriter) {
+//        		Main.writeOutput(mainWriter, gigaString);
+//        	}
 	        mainWriter.flush();
 	        //mainWriter.close();
         } catch (IOException e) {
@@ -114,7 +114,8 @@ public class Main {
 			//important the sequence num starts from 1
 			//Main.writeOutput(myWriter, String.format("d %d %d\n", from, m.sequenceNum+1));
 			synchronized(mainWriter) {
-				gigaString += String.format("d %d %d\n", from, m.sequenceNum+1);
+				gigaString = gigaString+String.format("d %d %d\n", from, m.sequenceNum+1);
+				System.out.println(gigaString.length());
 				if (gigaString.length() > 4096)
 					Main.writeOutput(myWriter, gigaString);
 				gigaString = "";
@@ -158,10 +159,10 @@ public class Main {
 	//int m = Integer.parseInt(configLines.get(0));
 	for (int i=0; i < nMessages; i++) {
         Message m = new Message((byte)myid, (byte)0);
-        synchronized(mainWriter) {
-            gigaString += String.format("b %d\n", i+1);
-        }
-        //Main.writeOutput(myWriter, String.format("b %d\n", i+1));
+//        synchronized(mainWriter) {
+//            gigaString = gigaString + String.format("b %d\n", i+1);
+//        }
+        Main.writeOutput(myWriter, String.format("b %d\n", i+1));
         lcb.broadcast(m);
         
         
